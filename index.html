@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Micro Arcade (Beta)</title>
+  <style>
+    :root { --bg:#0f1220; --card:#161a2b; --text:#e7e9ff; --accent:#6cf; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto; display:grid; place-items:center; min-height:100vh; }
+    .wrap { width:min(900px,92vw); padding:20px; }
+    .card { background:var(--card); border-radius:16px; padding:18px; box-shadow:0 6px 28px rgba(0,0,0,.35); }
+    h1 { margin:0 0 8px; font-size:28px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    input,button { background:#0f1330; color:var(--text); border:1px solid #2a2e48; border-radius:10px; padding:10px 12px; }
+    button { cursor:pointer }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:16px; }
+    canvas { width:100%; height:220px; background:#0b0e1f; border-radius:12px; display:block; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:8px 6px; border-bottom:1px solid #2a2e48; font-size:14px; }
+    .pill { background:#0f1330; padding:6px 10px; border:1px solid #2a2e48; border-radius:999px; }
+    .ok { color:#9cff8a } .bad { color:#ff8888 }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Micro Arcade — Skill Crash (Beta)</h1>
+      <p>Click <em>inside</em> the moving target to score. First correct hit wins the <span id="pot" class="pill">Pot: 250 Tokens</span></p>
+      <div class="row">
+        <input id="name" placeholder="Enter a short name (for leaderboard)" maxlength="18"/>
+        <button id="join">Join Round (25 Tokens)</button>
+        <span id="status" class="pill">Waiting to join…</span>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <canvas id="game" width="760" height="220"></canvas>
+          <div class="row">
+            <button id="start">Start Round</button>
+            <button id="click" disabled>Click!</button>
+            <span id="result"></span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Leaderboard (Local / Demo)</h3>
+          <table>
+            <thead><tr><th>Player</th><th>Score (ms from center)</th><th>When</th></tr></thead>
+            <tbody id="board"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <p style="opacity:.75;margin-top:12px">Practice mode. Tokens & pot are mock for MVP. No real money.</p>
+    </div>
+  </div>
+
+  <!-- Optional: Supabase client (leave if you’ll wire persistence later) -->
+  <!-- <script src="https://unpkg.com/@supabase/supabase-js@2"></script> -->
+  <script src="script.js"></script>
+</body>
+</html>
