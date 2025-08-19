@@ -151,6 +151,23 @@
   /* Layout helpers */
   .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
   .spacer{ flex:1 }
+  /* Glow on pot/status pills */
+.pill.badge { 
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent-2) 35%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); 
+}
+.pill { 
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); 
+}
+
+/* Animate the target outline slightly for visibility */
+@keyframes pulse { 
+  from { box-shadow:0 0 0 0 color-mix(in srgb, var(--accent-2) 55%, transparent);} 
+  to   { box-shadow:0 0 16px 6px color-mix(in srgb, var(--accent-2) 0%, transparent);} 
+}
+.canvas-wrap { animation: pulse 2s ease-in-out infinite; }
+
 </style>
 </head>
 <body>
