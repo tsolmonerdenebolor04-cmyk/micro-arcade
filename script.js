@@ -151,7 +151,8 @@ $("start").onclick = ()=>{
   $("status").textContent = `Round live (${DIFFS[chosenDiffKey].label}): click inside the target!`;
 };
 
-$("click").onclick = ()=>{
+$("click").onclick = async () => {
+
   if (!playing) return;
   $("click").disabled = true;
   playing=false; cancelAnimationFrame(raf);
@@ -183,7 +184,8 @@ $("click").onclick = ()=>{
 
     const name = ($("name").value.trim() || "anon").slice(0,18);
 
-    addScore(name, msFromCenter); // keep local leaderboard
+   await saveScore(name, msFromCenter, chosenDiffKey);
+
     const won = currentPot + streakBonus;
 
     TOKENS += won;                // pot + bonus
