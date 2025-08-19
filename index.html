@@ -1,61 +1,155 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Micro Arcade (Beta)</title>
-  <style>
-    :root { --bg:#0f1220; --card:#161a2b; --text:#e7e9ff; --accent:#6cf; }
-    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto; display:grid; place-items:center; min-height:100vh; }
-    .wrap { width:min(900px,92vw); padding:20px; }
-    .card { background:var(--card); border-radius:16px; padding:18px; box-shadow:0 6px 28px rgba(0,0,0,.35); }
-    h1 { margin:0 0 8px; font-size:28px; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input,button { background:#0f1330; color:var(--text); border:1px solid #2a2e48; border-radius:10px; padding:10px 12px; }
-    button { cursor:pointer }
-    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:16px; }
-    canvas { width:100%; height:220px; background:#0b0e1f; border-radius:12px; display:block; }
-    table { width:100%; border-collapse:collapse; }
-    th,td { padding:8px 6px; border-bottom:1px solid #2a2e48; font-size:14px; }
-    .pill { background:#0f1330; padding:6px 10px; border:1px solid #2a2e48; border-radius:999px; }
-    .ok { color:#9cff8a } .bad { color:#ff8888 }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Micro Arcade — Skill Crash (Beta)</title>
+
+<!-- Optional: nicer font -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============ THEME (tweak these 6 colors to rebrand fast) ============ */
+  :root{
+    --bg:#0a0f1f;
+    --bg2:#0b1128;
+    --grad1:#101633;
+    --grad2:#0b122b;
+    --text:#eaf0ff;
+    --muted:#a6b0d4;
+    --accent:#7bc4ff;   /* primary neon */
+    --accent-2:#8dffcf; /* secondary neon */
+    --card:#11172e;
+    --card-2:#0f152a;
+    --border:#1f2747;
+    --shadow:0 10px 35px rgba(0,0,0,.45);
+  }
+
+  /* Background with soft animated gradient */
+  body{
+    margin:0; min-height:100vh; color:var(--text);
+    font:16px/1.5 "Outfit",system-ui,-apple-system,Segoe UI,Roboto;
+    background:
+      radial-gradient(1200px 600px at -10% -20%, #162b74 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 120%, #1b5fa8 0%, transparent 60%),
+      linear-gradient(160deg,var(--grad1),var(--grad2));
+    display:grid; place-items:center;
+  }
+
+  .wrap{ width:min(1100px,94vw); padding:28px; }
+  .panel{
+    background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.0)) , var(--card);
+    border:1px solid var(--border);
+    border-radius:20px; padding:22px; box-shadow:var(--shadow);
+    backdrop-filter: blur(8px);
+  }
+
+  h1{ margin:0 0 6px; font-size:32px; letter-spacing:.3px }
+  .sub{ color:var(--muted); margin:0 0 14px }
+
+  /* Pills & buttons */
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:999px; border:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+    color:var(--text);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .pill.badge{ background:linear-gradient(180deg, rgba(123,196,255,.18), rgba(141,255,207,.08)); border-color:#254b6b; }
+
+  input,button{
+    border:1px solid var(--border);
+    background:linear-gradient(180deg,#0e1330,#0b112b);
+    color:var(--text); padding:10px 14px; border-radius:12px;
+    font:600 15px "Outfit",system-ui; outline:none;
+    transition:.15s ease; box-shadow: inset 0 -4px 0 rgba(255,255,255,.02);
+  }
+  input::placeholder{ color:#97a1c7 }
+  input:focus{ border-color:#2c4c9e; box-shadow:0 0 0 3px rgba(123,196,255,.25) inset, 0 0 0 2px rgba(123,196,255,.25); }
+
+  button{ cursor:pointer }
+  button:hover{ transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,0,0,.35) }
+  button:active{ transform:translateY(0) scale(.99) }
+  button.primary{
+    background:linear-gradient(180deg,#0e264d,#0d1f44);
+    border-color:#294d7c;
+  }
+
+  .grid{
+    display:grid; gap:18px; margin-top:16px;
+    grid-template-columns:1.2fr .8fr;
+  }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr } }
+
+  /* Game card */
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01)), var(--card-2);
+    border:1px solid var(--border); border-radius:18px; padding:16px;
+  }
+  .canvas-wrap{ background:#0a0f22; border:1px solid #1b2442; border-radius:16px; padding:14px }
+  canvas{ width:100%; height:260px; display:block; border-radius:10px; background:#0b0f1e }
+
+  /* Table */
+  table{ width:100%; border-collapse:collapse }
+  th,td{ padding:10px 8px; border-bottom:1px dashed #242d50; font-size:14px }
+  th{ color:#cbd6ff; text-align:left }
+  tr:hover td{ background:rgba(255,255,255,.02) }
+
+  /* Status text */
+  .ok{ color:var(--accent-2); font-weight:700 }
+  .bad{ color:#ff9a9a; font-weight:700 }
+  .foot{ color:var(--muted); margin-top:14px }
+
+  /* Layout helpers */
+  .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
+  .spacer{ flex:1 }
+</style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1>Micro Arcade — Skill Crash (Beta)</h1>
-      <p>Click <em>inside</em> the moving target to score. First correct hit wins the <span id="pot" class="pill">Pot: 250 Tokens</span></p>
-      <div class="row">
-        <input id="name" placeholder="Enter a short name (for leaderboard)" maxlength="18"/>
-        <button id="join">Join Round (25 Tokens)</button>
-        <span id="status" class="pill">Waiting to join…</span>
+    <div class="panel">
+      <h1>Micro Arcade — <span style="color:var(--accent)">Skill Crash</span> <span class="sub" style="font-size:14px">(Beta)</span></h1>
+      <p class="sub">Click <b>inside</b> the moving target to score. First correct hit wins the</p>
+      <div class="row" style="margin:6px 0 14px">
+        <input id="name" placeholder="Your name (leaderboard)" maxlength="18" />
+        <button id="join" class="primary">Join Round (25 Tokens)</button>
+        <span id="status" class="pill">Tokens: …</span>
+        <span id="pot" class="pill badge">Pot: …</span>
+        <span class="spacer"></span>
       </div>
 
       <div class="grid">
+        <!-- LEFT: game -->
         <div class="card">
-          <canvas id="game" width="760" height="220"></canvas>
-          <div class="row">
-            <button id="start">Start Round</button>
+          <div class="canvas-wrap">
+            <canvas id="game" width="760" height="260"></canvas>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button id="start" class="primary" disabled>Start Round</button>
             <button id="click" disabled>Click!</button>
-            <span id="result"></span>
+            <span id="result" class="sub"></span>
           </div>
         </div>
+
+        <!-- RIGHT: leaderboard -->
         <div class="card">
-          <h3>Leaderboard (Local / Demo)</h3>
+          <h3 style="margin:2px 0 10px">Leaderboard <span class="sub">(Local / Demo)</span></h3>
           <table>
-            <thead><tr><th>Player</th><th>Score (ms from center)</th><th>When</th></tr></thead>
-            <tbody id="board"></tbody>
+            <thead>
+              <tr><th>Player</th><th>Score (ms from center)</th><th>When</th></tr>
+            </thead>
+            <tbody id="board">
+              <!-- rows injected by script.js -->
+            </tbody>
           </table>
         </div>
       </div>
 
-      <p style="opacity:.75;margin-top:12px">Practice mode. Tokens & pot are mock for MVP. No real money.</p>
+      <p class="foot">Practice mode. Tokens & pot are mock for MVP. No real money.</p>
     </div>
   </div>
 
-  <!-- Optional: Supabase client (leave if you’ll wire persistence later) -->
-  <!-- <script src="https://unpkg.com/@supabase/supabase-js@2"></script> -->
+  <!-- keep your existing game logic -->
   <script src="script.js"></script>
 </body>
 </html>
