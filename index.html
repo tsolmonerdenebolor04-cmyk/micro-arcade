@@ -111,12 +111,26 @@
       <h1>Micro Arcade — <span style="color:var(--accent)">Skill Crash</span> <span class="sub" style="font-size:14px">(Beta)</span></h1>
       <p class="sub">Click <b>inside</b> the moving target to score. First correct hit wins the</p>
       <div class="row" style="margin:6px 0 14px">
-        <input id="name" placeholder="Your name (leaderboard)" maxlength="18" />
-        <button id="join" class="primary">Join Round (25 Tokens)</button>
-        <span id="status" class="pill">Tokens: …</span>
-        <span id="pot" class="pill badge">Pot: …</span>
-        <span class="spacer"></span>
-      </div>
+  <input id="name" placeholder="Your name (leaderboard)" maxlength="18" />
+
+  <!-- NEW: difficulty selector -->
+  <select id="difficulty" class="pill" style="padding:10px 12px">
+    <option value="easy">Easy</option>
+    <option value="medium" selected>Medium</option>
+    <option value="hard">Hard</option>
+  </select>
+
+  <button id="join" class="primary">Join Round (25 Tokens)</button>
+
+  <span id="status" class="pill">Tokens: …</span>
+  <span id="pot" class="pill badge">Pot: …</span>
+
+  <!-- NEW: show streak -->
+  <span id="streakPill" class="pill">Streak: 0</span>
+
+  <span class="spacer"></span>
+</div>
+
 
       <div class="grid">
         <!-- LEFT: game -->
