@@ -17,6 +17,39 @@ function streakMultiplier(streak) {
 const $ = (id)=>document.getElementById(id);
 const fmt = (d)=>new Date(d).toLocaleTimeString();
 const esc = (s)=> (s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+// ===== SUPABASE PERSISTENCE =====
+const SUPABASE_URL = "https://cvczekrygfyahqnosivo.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2Y3pla3J5Z2Z5YWhxbm9zaXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjQ5ODAsImV4cCI6MjA3MTE0MDk4MH0.263c9ncmGjFXltImaW5TZWnkBRpjPenMLVtKI1lHZoQ";   // replace with real anon key
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function saveScore(name, score, difficulty) {
+  try {
+    const { error } = await sb.from("scores").insert({ name, score, difficulty });
+    if (error) throw error;
+    await renderBoard();
+  } catch (e) {
+    console.error("saveScore error", e);
+  }
+}
+
+async function renderBoard() {
+  try {
+    const { data, error } = await sb
+      .from("scores")
+      .select("name, score, created_at, difficulty")
+      .order("score", { ascending: true })
+      .limit(50);
+    if (error) throw error;
+    $("board").innerHTML =
+      (data || [])
+        .map(r =>
+          `<tr><td>${esc(r.name)}</td><td>${r.score}</td><td>${fmt(r.created_at)}</td></tr>`
+        )
+        .join("") || `<tr><td colspan="3"><em>No scores yet</em></td></tr>`;
+  } catch (e) {
+    console.error("renderBoard error", e);
+  }
+}
 
 // ------- Economy (local-only, practice) -------
 let TOKENS = Number(localStorage.getItem("TOKENS") || 1500);
