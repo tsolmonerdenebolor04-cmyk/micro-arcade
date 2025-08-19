@@ -1,139 +1,193 @@
-// ---- Simple mock economy (local only for MVP) ----
-let TOKENS = Number(localStorage.getItem("TOKENS") || 1000);
-let joined = false;
-let currentPot = 250;
-const BUY_IN = 25;
+// ================== Difficulty + Streak upgrade ==================
+
+const DIFFS = {
+  easy:   { label: "Easy",   targetW: [0.12, 0.16], speed: [0.60, 0.90], buyIn: 25,  bonus: 1.00 },
+  medium: { label: "Medium", targetW: [0.08, 0.12], speed: [0.80, 1.20], buyIn: 35,  bonus: 1.25 },
+  hard:   { label: "Hard",   targetW: [0.05, 0.08], speed: [1.00, 1.50], buyIn: 50,  bonus: 1.50 },
+};
+
+// Streak multiplier table: 1, 1.5, 2, 3 (cap at 3x)
+function streakMultiplier(streak) {
+  if (streak <= 1) return 1;
+  if (streak === 2) return 1.5;
+  if (streak === 3) return 2;
+  return 3; // 4 or more
+}
 
 const $ = (id)=>document.getElementById(id);
 const fmt = (d)=>new Date(d).toLocaleTimeString();
+const esc = (s)=> (s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 
-function updatePot() { $("pot").textContent = `Pot: ${currentPot} Tokens`; }
-function setStatus(txt) { $("status").textContent = txt; }
+// ------- Economy (local-only, practice) -------
+let TOKENS = Number(localStorage.getItem("TOKENS") || 1500);
+let currentPot = Number(localStorage.getItem("POT") || 250);
+let joined = false;
+let streak = Number(localStorage.getItem("STREAK") || 0);
+let chosenDiffKey = (localStorage.getItem("DIFF") || "medium");
 
-$("join").onclick = ()=>{
-  const name = $("name").value.trim();
-  if (!name) { setStatus("Enter a name first"); return; }
-  if (joined) { setStatus("Already joined this round"); return; }
-  if (TOKENS < BUY_IN) { setStatus("Not enough tokens"); return; }
-  TOKENS -= BUY_IN;
+function updateUI(){
+  $("status").textContent = `Tokens: ${TOKENS}`;
+  $("pot").textContent    = `Pot: ${currentPot} Tokens`;
+  $("streakPill").textContent = `Streak: ${streak}`;
+  // Sync difficulty selector + join button label
+  $("difficulty").value = chosenDiffKey;
+  const buyIn = DIFFS[chosenDiffKey].buyIn;
+  $("join").textContent = `Join Round (${buyIn} Tokens)`;
+}
+function saveEconomy(){
   localStorage.setItem("TOKENS", TOKENS);
-  joined = true;
-  currentPot += BUY_IN;
-  updatePot();
-  setStatus(`Joined! Tokens left: ${TOKENS}`);
-  $("start").disabled = false;
-};
-
-// ---- Skill Crash game (pure timing) ----
-const canvas = $("game");
-const ctx = canvas.getContext("2d");
-
-let t = 0, raf = null, playing = false;
-let target = { x: 0.55, w: 0.10 }; // relative position & width
-let bar = { speed: 0.85 }; // cycles / sec, will vary
-let startedAt = 0;
-
-function draw() {
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-
-  // timeline rail
-  ctx.fillStyle = "#223";
-  ctx.fillRect(40, H/2-12, W-80, 24);
-
-  // moving bar
-  const elapsed = (performance.now() - startedAt)/1000;
-  const phase = elapsed * bar.speed; // cycles per sec
-  const x = 40 + (( (phase % 1) ) * (W-80));
-  ctx.fillStyle = "#6cf";
-  ctx.fillRect(x-3, H/2-18, 6, 36);
-
-  // target window
-  const tx = 40 + target.x*(W-80);
-  const tw = target.w*(W-80);
-  ctx.strokeStyle = "#9cff8a";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(tx - tw/2, H/2-22, tw, 44);
-
-  raf = requestAnimationFrame(draw);
+  localStorage.setItem("POT", currentPot);
+  localStorage.setItem("STREAK", streak);
+  localStorage.setItem("DIFF", chosenDiffKey);
 }
 
-function resetRound() {
-  // Generate a fresh target & speed each round (deterministic seed optional later)
-  target.x = 0.25 + Math.random()*0.5;     // keep away from edges
-  target.w = 0.08 + Math.random()*0.06;    // 8–14% of rail
-  bar.speed = 0.70 + Math.random()*0.60;   // 0.7–1.3 cycles/sec
+// ------- Difficulty selector -------
+$("difficulty").addEventListener("change", () => {
+  chosenDiffKey = $("difficulty").value;
+  const buyIn = DIFFS[chosenDiffKey].buyIn;
+  $("join").textContent = `Join Round (${buyIn} Tokens)`;
+  saveEconomy();
+});
+
+// ------- Join logic (uses chosen difficulty buy-in) -------
+$("join").onclick = () => {
+  const name = $("name").value.trim();
+  if (!name) { $("status").textContent = "Enter a name first"; return; }
+  if (joined) { $("status").textContent = "Already joined this round"; return; }
+
+  const buyIn = DIFFS[chosenDiffKey].buyIn;
+  if (TOKENS < buyIn) { $("status").textContent = "Not enough tokens"; return; }
+
+  TOKENS -= buyIn;
+  currentPot += buyIn;
+  joined = true;
+  $("start").disabled = false;
+  saveEconomy(); updateUI();
+  $("status").textContent = `Joined (${DIFFS[chosenDiffKey].label})! Tokens left: ${TOKENS}`;
+};
+
+// ------- The Skill Crash game -------
+const canvas = $("game"), ctx = canvas.getContext("2d");
+let playing=false, raf=0, startedAt=0;
+let target = { x:.55, w:.10 };  // relative center & width
+let bar = { speed:.9 };         // cycles/sec
+
+function randRange([a,b]){ return a + Math.random()*(b-a); }
+
+function resetRound(){
+  // pick params based on difficulty
+  const d = DIFFS[chosenDiffKey];
+  target.x = 0.22 + Math.random()*0.56;     // keep away from edges
+  target.w = randRange(d.targetW);
+  bar.speed = randRange(d.speed);
+
   $("result").textContent = "";
   $("click").disabled = false;
 }
 
+function draw(){
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // rail
+  ctx.fillStyle="#2a2f49";
+  ctx.fillRect(40, H/2-12, W-80, 24);
+
+  // target window
+  const tx = 40 + target.x*(W-80);
+  const tw = target.w*(W-80);
+  ctx.strokeStyle="#8dffcf"; ctx.lineWidth=3;
+  ctx.strokeRect(tx - tw/2, H/2-22, tw, 44);
+
+  // moving bar
+  const elapsed = (performance.now()-startedAt)/1000;
+  const phase = elapsed*bar.speed; // cycles
+  const x = 40 + ((phase%1)*(W-80));
+  ctx.fillStyle="#7bc4ff";
+  ctx.fillRect(x-3, H/2-18, 6, 36);
+
+  raf = requestAnimationFrame(draw);
+}
+
 $("start").onclick = ()=>{
-  if (!joined) { setStatus("Join the round first"); return; }
+  if (!joined) { $("status").textContent = "Join the round first"; return; }
   if (playing) return;
   resetRound();
-  playing = true;
-  startedAt = performance.now();
-  cancelAnimationFrame(raf);
-  draw();
-  setStatus("Round live: press Click inside target!");
+  playing = true; startedAt = performance.now();
+  cancelAnimationFrame(raf); draw();
+  $("status").textContent = `Round live (${DIFFS[chosenDiffKey].label}): click inside the target!`;
 };
 
 $("click").onclick = ()=>{
   if (!playing) return;
   $("click").disabled = true;
-  playing = false;
-  cancelAnimationFrame(raf);
+  playing=false; cancelAnimationFrame(raf);
 
   const W = canvas.width;
-  const elapsed = (performance.now() - startedAt)/1000;
-  const phase = (elapsed * bar.speed) % 1;
+  const elapsed = (performance.now()-startedAt)/1000;
+  const phase = (elapsed*bar.speed)%1;
   const railX = 40 + phase*(W-80);
 
-  // compute distance from center of target in pixels
   const tx = 40 + target.x*(W-80);
   const tw = target.w*(W-80);
   const center = tx;
   const distPx = Math.abs(railX - center);
   const inside = distPx <= tw/2;
 
-  // Convert pixel distance to "ms from center" feel
-  const msFromCenter = Math.round(distPx * (1000 / (W-80)) * 100); // scaled for nice numbers
+  // Convert pixel distance to a "ms from center" feel
+  const msFromCenter = Math.round(distPx * (1000/(W-80)) * 100);
 
   if (inside) {
-    // winner: add pot to player & reset pot
-    const name = $("name").value.trim().slice(0,18) || "anon";
-    saveLocalScore(name, msFromCenter);
-    TOKENS += currentPot;
-    localStorage.setItem("TOKENS", TOKENS);
-    $("result").innerHTML = `🎉 <span class="ok">HIT!</span> ${name} wins ${currentPot} Tokens · accuracy: ${msFromCenter} ms`;
-    currentPot = 250;
-    updatePot();
-    setStatus(`Tokens: ${TOKENS}`);
-    joined = false; // require re-join for next round
+    // WIN: update streak, award pot + bonus (based on difficulty & streak)
+    streak += 1;
+    const sMult = streakMultiplier(streak);     // 1, 1.5, 2, 3
+    const diffBonus = DIFFS[chosenDiffKey].bonus;
+
+    // Streak bonus is extra tokens on top of the pot (doesn't reduce the pot).
+    // Formula: buyIn * (sMult - 1) * diffBonus * 2  (tweakable)
+    const buyIn = DIFFS[chosenDiffKey].buyIn;
+    const streakBonus = Math.round(buyIn * (sMult - 1) * diffBonus * 2);
+
+    const name = ($("name").value.trim() || "anon").slice(0,18);
+
+    addScore(name, msFromCenter); // keep local leaderboard
+    const won = currentPot + streakBonus;
+
+    TOKENS += won;                // pot + bonus
+    currentPot = 250;             // reset pot for next round
+    joined = false;               // must re-join
     $("start").disabled = true;
+
+    saveEconomy(); updateUI();
+
+    $("result").innerHTML =
+      `🎉 <span class="ok">HIT!</span> ${esc(name)} wins <b>${won}</b> Tokens `
+      + `(Pot + <span title="streak x difficulty">Bonus ${streakBonus}</span>) · `
+      + `accuracy: ${msFromCenter} ms · streak x${sMult}`;
   } else {
-    $("result").innerHTML = `❌ <span class="bad">Missed</span> · off by ~${msFromCenter} ms. Try again next round!`;
+    // MISS: streak resets
+    streak = 0;
+    saveEconomy(); updateUI();
+    $("result").innerHTML = `❌ <span class="bad">Missed</span> · off by ~${msFromCenter} ms. Streak reset.`;
   }
 };
 
-// ---- Local leaderboard (use Supabase later) ----
-function saveLocalScore(name, score){
-  const row = { name, score, at: Date.now() };
+// ------- Local leaderboard -------
+function addScore(name,score){
   const data = JSON.parse(localStorage.getItem("LEADER")||"[]");
-  data.push(row);
+  data.push({name,score,at:Date.now()});
   data.sort((a,b)=>a.score-b.score); // lower is better
   localStorage.setItem("LEADER", JSON.stringify(data.slice(0,50)));
   renderBoard();
 }
-
 function renderBoard(){
-  const data = JSON.parse(localStorage.getItem("LEADER")||"[]");
-  $("board").innerHTML = data.map(r=>(
-    `<tr><td>${escapeHtml(r.name)}</td><td>${r.score}</td><td>${fmt(r.at)}</td></tr>`
-  )).join("");
+  const rows = JSON.parse(localStorage.getItem("LEADER")||"[]")
+    .map(r=>`<tr><td>${esc(r.name)}</td><td>${r.score}</td><td>${fmt(r.at)}</td></tr>`)
+    .join("");
+  $("board").innerHTML = rows || `<tr><td colspan="3"><em>No scores yet — be the first!</em></td></tr>`;
 }
-function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-updatePot();
+// Init
+updateUI();
 renderBoard();
-setStatus(`Tokens: ${TOKENS} · Join a round to play`);
+$("status").textContent = `Tokens: ${TOKENS} · Choose difficulty → Join to play`;
