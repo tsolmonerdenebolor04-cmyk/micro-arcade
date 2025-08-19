@@ -207,11 +207,6 @@ $("click").onclick = async () => {
   }
 };
 
-// ------- Local leaderboard -------
-function addScore(name,score){
-  const data = JSON.parse(localStorage.getItem("LEADER")||"[]");
-  data.push({name,score,at:Date.now()});
-  data.sort((a,b)=>a.score-b.score); // lower is better
   localStorage.setItem("LEADER", JSON.stringify(data.slice(0,50)));
   renderBoard();
 }
